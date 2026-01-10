@@ -317,6 +317,136 @@ END$$
 
 DELIMITER ;
 
+-- 6. sp_OduncRaporu: Tarih aralığına göre ödünç raporu
+DELIMITER $$
+
+CREATE PROCEDURE sp_OduncRaporu(
+    IN p_BaslangicTarihi DATE,
+    IN p_BitTarihi DATE,
+    IN p_UyeID INT,
+    IN p_KategoriID INT
+)
+BEGIN
+    SELECT 
+        o.OduncID,
+        u.uye_id,
+        CONCAT(u.ad, ' ', u.soyad) AS uye_adi,
+        k.kitap_adi,
+        kat.kategori_adi,
+        o.OduncTarihi,
+        o.SonTeslimTarihi,
+        o.IadeTarihi,
+        CASE 
+            WHEN o.IadeTarihi IS NULL THEN 'Teslim Edilmedi'
+            ELSE 'Teslim Edildi'
+        END AS durum
+    FROM odunc o
+    JOIN uye u ON o.UyeID = u.uye_id
+    JOIN kitap k ON o.KitapID = k.kitap_id
+    LEFT JOIN kategori kat ON k.kategori_id = kat.kategori_id
+    WHERE 
+        (p_BaslangicTarihi IS NULL OR DATE(o.OduncTarihi) >= p_BaslangicTarihi)
+        AND (p_BitTarihi IS NULL OR DATE(o.OduncTarihi) <= p_BitTarihi)
+        AND (p_UyeID IS NULL OR p_UyeID = 0 OR o.UyeID = p_UyeID)
+        AND (p_KategoriID IS NULL OR p_KategoriID = 0 OR k.kategori_id = p_KategoriID)
+    ORDER BY o.OduncTarihi DESC;
+END$$
+
+DELIMITER ;
+
+-- 7. sp_GecenKitaplar: Geciken kitaplar raporu
+DELIMITER $$
+
+CREATE PROCEDURE sp_GecenKitaplar()
+BEGIN
+    SELECT 
+        o.OduncID,
+        u.uye_id,
+        CONCAT(u.ad, ' ', u.soyad) AS uye_adi,
+        k.kitap_adi,
+        o.OduncTarihi,
+        o.SonTeslimTarihi,
+        DATEDIFF(CURDATE(), o.SonTeslimTarihi) AS gecikme_gun,
+        COALESCE(c.ceza_tutari, 0) AS ceza_tutari
+    FROM odunc o
+    JOIN uye u ON o.UyeID = u.uye_id
+    JOIN kitap k ON o.KitapID = k.kitap_id
+    LEFT JOIN ceza c ON o.OduncID = c.OduncID
+    WHERE 
+        o.SonTeslimTarihi < CURDATE()
+        AND o.IadeTarihi IS NULL
+    ORDER BY gecikme_gun DESC;
+END$$
+
+DELIMITER ;
+
+-- 8. sp_EnCokOdunc: En çok ödünç alınan kitaplar raporu
+DELIMITER $$
+
+CREATE PROCEDURE sp_EnCokOdunc(
+    IN p_BaslangicTarihi DATE,
+    IN p_BitTarihi DATE
+)
+BEGIN
+    SELECT 
+        k.kitap_id,
+        k.kitap_adi,
+        k.yazar,
+        kat.kategori_adi,
+        COUNT(o.OduncID) AS odunc_sayisi,
+        SUM(CASE WHEN o.IadeTarihi IS NULL THEN 1 ELSE 0 END) AS teslim_edilmemis_sayisi
+    FROM kitap k
+    LEFT JOIN odunc o ON k.kitap_id = o.KitapID
+    LEFT JOIN kategori kat ON k.kategori_id = kat.kategori_id
+    WHERE 
+        (p_BaslangicTarihi IS NULL OR DATE(o.OduncTarihi) >= p_BaslangicTarihi)
+        AND (p_BitTarihi IS NULL OR DATE(o.OduncTarihi) <= p_BitTarihi)
+        OR o.OduncID IS NULL
+    GROUP BY k.kitap_id, k.kitap_adi, k.yazar, kat.kategori_adi
+    HAVING COUNT(o.OduncID) > 0
+    ORDER BY odunc_sayisi DESC;
+END$$
+
+DELIMITER ;
+
+-- 9. sp_KitapAraDinamik: Dinamik kitap arama ve listeleme
+DELIMITER $$
+
+CREATE PROCEDURE sp_KitapAraDinamik(
+    IN p_KitapAdi VARCHAR(150),
+    IN p_Yazar VARCHAR(100),
+    IN p_KategoriID INT,
+    IN p_BasimYiliMin INT,
+    IN p_BasimYiliMax INT,
+    IN p_SadeceMevcut BOOLEAN,
+    IN p_SiralamaAlani VARCHAR(50),
+    IN p_SiralamaTipi VARCHAR(10)
+)
+BEGIN
+    SELECT 
+        k.kitap_id,
+        k.kitap_adi,
+        k.yazar,
+        kat.kategori_adi,
+        k.yayinevi,
+        k.basim_yili,
+        k.mevcut_adet,
+        k.toplam_adet,
+        CONCAT(k.mevcut_adet, ' / ', k.toplam_adet) AS stok_durumu
+    FROM kitap k
+    LEFT JOIN kategori kat ON k.kategori_id = kat.kategori_id
+    WHERE 
+        (p_KitapAdi IS NULL OR p_KitapAdi = '' OR k.kitap_adi LIKE CONCAT('%', p_KitapAdi, '%'))
+        AND (p_Yazar IS NULL OR p_Yazar = '' OR k.yazar LIKE CONCAT('%', p_Yazar, '%'))
+        AND (p_KategoriID IS NULL OR p_KategoriID = 0 OR k.kategori_id = p_KategoriID)
+        AND (p_BasimYiliMin IS NULL OR p_BasimYiliMin = 0 OR k.basim_yili >= p_BasimYiliMin)
+        AND (p_BasimYiliMax IS NULL OR p_BasimYiliMax = 0 OR k.basim_yili <= p_BasimYiliMax)
+        AND (p_SadeceMevcut = FALSE OR k.mevcut_adet > 0)
+    ORDER BY k.kitap_adi ASC;
+END$$
+
+DELIMITER ;
+
 -- ============================================
 -- TRIGGERS
 -- ============================================
@@ -419,6 +549,13 @@ INSERT INTO kitap (kitap_adi, yazar, kategori_id, yayinevi, basim_yili, toplam_a
 ('İhtiyaç Duyduğumuz Her Şey Öğretmek', 'Neil Gaiman', 1, 'Pegasus', 2019, 1, 1),
 ('Yapay Zeka Temelleri', 'Stuart Russell', 2, 'Prentice Hall', 2020, 2, 2);
 
+-- Arda Alık'ın 5 gün geç teslim ettiği kitap kaydı (Devlet Ana - kategori 1 = Roman)
+INSERT INTO odunc (UyeID, KitapID, OduncTarihi, SonTeslimTarihi, IadeTarihi, GorevilID) VALUES 
+(5, 1, '2026-01-08', '2026-01-03', '2026-01-08', 2);
+
+-- Arda Alık'ın 5 günlük cezası (5 gün * 5 TL/gün = 25 TL)
+INSERT INTO ceza (UyeID, OduncID, gecikme_gun, ceza_tutari) VALUES 
+(5, 1, 5, 25.00);
 
 -- ============================================
 -- İNDEKSLER (Performans için)
