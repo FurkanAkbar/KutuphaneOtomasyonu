@@ -4,7 +4,7 @@
 -- ============================================
 
 -- Veritabanı oluştur
-CREATE DATABASE IF NOT EXISTS universite_kutuphanesi; 
+CREATE DATABASE IF NOT EXISTS universite_kutuphanesi;  
 USE universite_kutuphanesi;
 
 -- ============================================
