@@ -233,19 +233,19 @@ public class UyeYonetimi extends JFrame {
                 String uyeAdi = model.getValueAt(satir, 1).toString();
                 String uyeSoyadi = model.getValueAt(satir, 2).toString();
                 
-                // Trigger tarafından aktif ödünç ve borç kontrol edilecek
-                String sql = "DELETE FROM uye WHERE uye_id = ?";
-                PreparedStatement ps = conn.prepareStatement(sql);
-                ps.setInt(1, id);
-                ps.executeUpdate();
-                
-                // Log kaydı yaz
+                // ÖNCE log kaydını yaz
                 String sqlLog = "INSERT INTO log_islem (islem_tipi, uye_id, aciklama) VALUES (?, ?, ?)";
                 PreparedStatement psLog = conn.prepareStatement(sqlLog);
                 psLog.setString(1, "Üye Silme");
                 psLog.setInt(2, id);
                 psLog.setString(3, "Silinen Üye: " + uyeAdi + " " + uyeSoyadi);
                 psLog.executeUpdate();
+                
+                // SONRA üyeyi sil (trigger tarafından aktif ödünç ve borç kontrol edilecek)
+                String sql = "DELETE FROM uye WHERE uye_id = ?";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setInt(1, id);
+                ps.executeUpdate();
                 
                 JOptionPane.showMessageDialog(this, "Üye başarıyla silindi!");
                 verileriGetir();
