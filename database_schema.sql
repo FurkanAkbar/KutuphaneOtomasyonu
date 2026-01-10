@@ -420,7 +420,6 @@ INSERT INTO kitap (kitap_adi, yazar, kategori_id, yayinevi, basim_yili, toplam_a
 ('Yapay Zeka Temelleri', 'Stuart Russell', 2, 'Prentice Hall', 2020, 2, 2);
 
 
-
 -- ============================================
 -- İNDEKSLER (Performans için)
 -- ============================================
