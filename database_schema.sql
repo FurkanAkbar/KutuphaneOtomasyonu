@@ -10,7 +10,7 @@ USE universite_kutuphanesi;
 -- ============================================
 -- 1. KULLANICI TABLOSU
 -- ============================================
-CREATE TABLE IF NOT EXISTS kullanici (
+CREATE TABLE IF NOT EXISTS kullanici ( 
     kullanici_id INT PRIMARY KEY AUTO_INCREMENT,
     kullanici_adi VARCHAR(50) UNIQUE NOT NULL,
     sifre VARCHAR(100) NOT NULL,
