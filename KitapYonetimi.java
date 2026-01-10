@@ -141,7 +141,15 @@ public class KitapYonetimi extends JFrame {
         // SQL Başlangıcı
         String sql = "SELECT k.*, kat.kategori_adi FROM kitap k " +
                      "LEFT JOIN kategori kat ON k.kategori_id = kat.kategori_id " +
-                     "WHERE k.kitap_adi LIKE ? AND k.yazar LIKE ?";
+                     "WHERE 1=1";
+        
+        // Dinamik WHERE koşulları - boş alanlar kontrol edilir
+        if (!kitapAdi.isEmpty()) {
+            sql += " AND k.kitap_adi LIKE ?";
+        }
+        if (!yazar.isEmpty()) {
+            sql += " AND k.yazar LIKE ?";
+        }
         
         // Eğer "Hepsi" (ID 4) seçili değilse kategori şartı ekle
         if (kategoriId != 4) {
@@ -151,8 +159,14 @@ public class KitapYonetimi extends JFrame {
         try (Connection conn = DriverManager.getConnection(URL, USER, PASS);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setString(1, "%" + kitapAdi + "%");
-            pstmt.setString(2, "%" + yazar + "%");
+            // PreparedStatement parametrelerini dinamik olarak set et
+            int paramIndex = 1;
+            if (!kitapAdi.isEmpty()) {
+                pstmt.setString(paramIndex++, "%" + kitapAdi + "%");
+            }
+            if (!yazar.isEmpty()) {
+                pstmt.setString(paramIndex++, "%" + yazar + "%");
+            }
             
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
