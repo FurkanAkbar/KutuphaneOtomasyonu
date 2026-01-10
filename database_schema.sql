@@ -419,13 +419,7 @@ INSERT INTO kitap (kitap_adi, yazar, kategori_id, yayinevi, basim_yili, toplam_a
 ('İhtiyaç Duyduğumuz Her Şey Öğretmek', 'Neil Gaiman', 1, 'Pegasus', 2019, 1, 1),
 ('Yapay Zeka Temelleri', 'Stuart Russell', 2, 'Prentice Hall', 2020, 2, 2);
 
--- Arda Alık'ın 5 gün geç teslim ettiği kitap kaydı (Devlet Ana - kategori 1 = Roman)
-INSERT INTO odunc (UyeID, KitapID, OduncTarihi, SonTeslimTarihi, IadeTarihi, GorevilID) VALUES 
-(5, 1, '2026-01-08', '2026-01-03', '2026-01-08', 2);
 
--- Arda Alık'ın 5 günlük cezası (5 gün * 5 TL/gün = 25 TL)
-INSERT INTO ceza (UyeID, OduncID, gecikme_gun, ceza_tutari) VALUES 
-(5, 1, 5, 25.00);
 
 -- ============================================
 -- İNDEKSLER (Performans için)
